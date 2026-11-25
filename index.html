@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Zero-Trace Security Headers: No Referrer, No Caching, Strict Local-Only Script CSP -->
+  <meta name="referrer" content="no-referrer" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src https: http:; form-action 'none'; base-uri 'self';"
+  />
+  <title>Agent checker AI API Debugger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./assets/css/styles.css" />
+</head>
+<body>
+
+  <header class="top-navbar">
+    <div class="brand-group">
+      <svg class="jwt-pinwheel" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="50" cy="50" r="46" stroke="currentColor" stroke-opacity="0.15" stroke-width="3" />
+        <path d="M50 10 L62 42 L50 50 L38 42 Z" fill="#fb015b"/>
+        <path d="M50 90 L38 58 L50 50 L62 58 Z" fill="#fb015b"/>
+        <path d="M85 30 L58 52 L50 50 L54 36 Z" fill="#d63aff"/>
+        <path d="M15 70 L42 48 L50 50 L46 64 Z" fill="#d63aff"/>
+        <path d="M85 70 L54 64 L50 50 L58 48 Z" fill="#00b9f1"/>
+        <path d="M15 30 L46 36 L50 50 L42 52 Z" fill="#00b9f1"/>
+        <circle cx="50" cy="50" r="8" fill="#ffffff"/>
+      </svg>
+      <div class="brand-title">
+        AGENT API<span class="dot-io">.IO</span>
+      </div>
+      <span class="zero-trace-indicator" title="Zero Disk Cache • 100% RAM-Only Execution">
+        <span class="pulse-dot"></span>
+        RAM-Only
+      </span>
+    </div>
+
+    <div class="nav-controls">
+      <div class="nav-pill" title="Auto-wipe secrets after inactivity">
+        <span>Wipe:</span>
+        <strong id="idleTimerDisplay" class="text-cyan">05:00</strong>
+        <select id="idleTimeoutSelect" class="idle-select" aria-label="Auto-Wipe Timeout">
+          <option value="2">2m</option>
+          <option value="5" selected>5m</option>
+          <option value="15">15m</option>
+          <option value="30">30m</option>
+        </select>
+      </div>
+
+      <button type="button" id="btnThemeToggle" class="btn-nav-outline" title="Switch Dark / Light Mode">
+        <span id="themeToggleLabel">Light</span>
+      </button>
+
+      <button type="button" id="btnPurgeRam" class="btn-purge-ram" title="Wipe all secrets from RAM & DOM">
+        Purge RAM
+      </button>
+    </div>
+  </header>
+
+  <div class="debugger-toolbar">
+    <div class="toolbar-left">
+      <h1 class="debugger-heading">Debugger</h1>
+      <span class="toolbar-sub">Zero-trace client-side API &amp; model forensics</span>
+    </div>
+
+    <div class="protocol-pills" id="protocolPills">
+      <button type="button" class="protocol-pill active" data-preset="auto">Auto</button>
+      <button type="button" class="protocol-pill" data-preset="openai">OpenAI</button>
+      <button type="button" class="protocol-pill" data-preset="openrouter">OpenRouter</button>
+      <button type="button" class="protocol-pill" data-preset="anthropic">Anthropic</button>
+      <button type="button" class="protocol-pill" data-preset="gemini">Gemini</button>
+      <button type="button" class="protocol-pill" data-preset="litellm">LiteLLM</button>
+    </div>
+  </div>
+
+  <!-- Mobile Quick-Switch Bar (Visible on Tablet/Mobile <= 1024px) -->
+  <nav class="mobile-pane-nav" id="mobilePaneNav" aria-label="Mobile View Switcher">
+    <button type="button" class="mobile-nav-btn active" data-mobile-view="all">Split / All</button>
+    <button type="button" class="mobile-nav-btn" data-mobile-view="config">Configuration</button>
+    <button type="button" class="mobile-nav-btn" data-mobile-view="results">
+      Diagnostics <span id="mobileNavScore" class="mobile-nav-badge">0/7</span>
+    </button>
+  </nav>
+
+  <main class="debugger-grid" id="debuggerGrid">
+
+    <section class="pane-column" id="paneConfig">
+      <div class="pane-top-header">
+        <span class="pane-top-title">Configuration</span>
+        <div class="pane-header-actions">
+          <button type="button" class="btn-text-link" id="btnToggleImporter">+ Paste .env / cURL</button>
+          <button type="button" class="btn-text-link" id="btnToggleAdvanced">+ Headers</button>
+        </div>
+      </div>
+
+      <!-- JWT.io 3-Color Encoded Bar -->
+      <div class="jwt-encoded-display" id="liveEncodedPreview" aria-live="polite">
+        <span class="token-seg-header" id="encSegHeader">https://api.openai.com/v1</span><span class="token-dot">.</span><span class="token-seg-payload" id="encSegPayload">gpt-4o-mini</span><span class="token-dot">.</span><span class="token-seg-sig" id="encSegSig">&lt;EMPTY_API_KEY&gt;</span>
+      </div>
+
+      <!-- Hidden Quick Importer Drawer -->
+      <div class="drawer-box" id="importerDrawer">
+        <textarea
+          id="ephemeralImportTextarea"
+          class="importer-textarea"
+          placeholder="Paste .env (STRIX_LLM, LLM_API_KEY, LLM_BASE_URL...), JSON, or cURL here. Auto-clears on paste."
+        ></textarea>
+        <div class="drawer-footer">
+          <span class="muted-note">Auto-wiped from DOM after parse</span>
+          <button type="button" id="btnParseImport" class="btn-secondary-sm">Apply</button>
+        </div>
+      </div>
+
+      <!-- Hidden Advanced Headers & Zero-Trace CORS Bridge Drawer -->
+      <div class="drawer-box" id="advancedDrawer">
+        <div class="input-row-flex responsive-stack" style="margin-bottom: 8px;">
+          <select id="selectBridgeMode" class="jwt-input bridge-mode-select" title="Zero-Trace CORS Bridge Mode">
+            <option value="auto" selected>CORS: Auto-Failover</option>
+            <option value="always">CORS: Always Bridge</option>
+            <option value="direct">CORS: Direct Only</option>
+          </select>
+          <input
+            type="text"
+            id="inputBridgeUrl"
+            class="jwt-input"
+            value="http://127.0.0.1:8787/proxy"
+            placeholder="Zero-Trace Bridge URL (http://127.0.0.1:8787/proxy or Cloudflare Worker URL)"
+          />
+        </div>
+        <div class="input-row-flex responsive-stack">
+          <input
+            type="text"
+            id="inputCustomHeaders"
+            class="jwt-input"
+            placeholder='Custom Headers JSON e.g. {"HTTP-Referer": "https://app.local"}'
+          />
+          <input
+            type="number"
+            id="inputTimeoutMs"
+            class="jwt-input timeout-input"
+            value="25000"
+            min="3000"
+            max="120000"
+            title="Timeout (ms)"
+          />
+        </div>
+      </div>
+
+      <!-- Clean 3-Field Form -->
+      <div class="config-form-body">
+
+        <!-- 1. HEADER: ENDPOINT (MAGENTA) -->
+        <div class="jwt-input-card card-magenta">
+          <div class="input-label-row">
+            <label class="input-label text-magenta" for="inputBaseUrl">HEADER • Base URL</label>
+            <span class="input-badge" id="detectedProtocolBadge">OPENAI-COMPAT</span>
+          </div>
+          <input
+            type="text"
+            id="inputBaseUrl"
+            class="jwt-input"
+            value="https://api.openai.com/v1"
+            placeholder="https://api.openai.com/v1"
+          />
+          <div class="input-subhint" id="normalizedUrlHint">https://api.openai.com/v1/chat/completions</div>
+        </div>
+
+        <!-- 2. PAYLOAD: MODEL ID (PURPLE) -->
+        <div class="jwt-input-card card-purple">
+          <div class="input-label-row">
+            <label class="input-label text-purple" for="inputModelId">PAYLOAD • Model ID</label>
+            <span class="input-badge" id="modelsCountBadge">Registry</span>
+          </div>
+          <div class="input-row-flex">
+            <input
+              type="text"
+              id="inputModelId"
+              class="jwt-input"
+              value="gpt-4o-mini"
+              placeholder="gpt-4o, claude-3-7-sonnet-latest, gemini-2.5-flash"
+            />
+            <button type="button" id="btnFetchModels" class="btn-secondary-sm">Fetch</button>
+          </div>
+          <div class="model-dropdown-list" id="modelDropdownList"></div>
+        </div>
+
+        <!-- 3. SIGNATURE: API KEY (CYAN) -->
+        <div class="jwt-input-card card-cyan">
+          <div class="input-label-row">
+            <label class="input-label text-cyan" for="inputApiKey">SIGNATURE • API Key</label>
+            <span class="input-badge" id="keyFormatBadge">NO KEY</span>
+          </div>
+          <div class="input-row-flex">
+            <input
+              type="text"
+              id="inputApiKey"
+              class="jwt-input secret-masked"
+              placeholder="sk-..., sk-ant-..., AIzaSy..."
+            />
+            <button type="button" id="btnToggleMask" class="btn-secondary-sm">Show</button>
+          </div>
+          <div class="input-subhint" id="authHeaderHint">Authorization: Bearer ***</div>
+        </div>
+
+        <!-- Run Actions -->
+        <div class="test-action-row">
+          <button type="button" id="btnRunFullSuite" class="btn-run-suite">
+            Run Full Agent Test (7 Stages)
+          </button>
+          <button type="button" id="btnQuickPing" class="btn-quick-ping" title="Fast Auth + Ping Check">
+            Quick Ping
+          </button>
+        </div>
+      </div>
+
+      <!-- JWT.IO BOTTOM VERIFICATION BANNER -->
+      <div class="jwt-verification-banner" id="verificationBanner">
+        <div>
+          <div class="verdict-main verdict-idle" id="verdictHeadline">Ready to Test</div>
+          <div class="verdict-sub" id="verdictSubtext">No secrets are cached or stored on disk.</div>
+        </div>
+        <div id="verdictScoreBadge" class="stage-badge badge-pending">0 / 7</div>
+      </div>
+    </section>
+
+    <section class="pane-column" id="paneResults">
+      <div class="pane-top-header">
+        <span class="pane-top-title">Decoded Metadata &amp; Diagnostics</span>
+        <span class="pane-top-hint" id="headerHttpStatusBadge">IDLE</span>
+      </div>
+
+      <!-- 1. HEADER: GATEWAY & NETWORK (MAGENTA) -->
+      <div class="decoded-section">
+        <div class="decoded-section-bar">
+          <span class="decoded-section-title text-magenta">HEADER: GATEWAY &amp; NETWORK</span>
+          <div class="inline-metrics">
+            <span id="kpiGatewayName">—</span>
+            <span>•</span>
+            <span id="kpiLatency">—</span>
+            <span id="kpiRateLimit" style="display:none;"></span>
+            <span id="kpiCorsStatus" style="display:none;"></span>
+            <div class="sub-tabs" style="margin-left: 6px;">
+              <button type="button" class="sub-tab active-magenta" id="tabBtnHeaderSysinfo">Server &amp; IP</button>
+              <button type="button" class="sub-tab" id="tabBtnHeaderPoints">Points</button>
+              <button type="button" class="sub-tab" id="tabBtnHeaderJson">JSON</button>
+            </div>
+          </div>
+        </div>
+        <div class="decoded-body">
+          <div class="sysinfo-table" id="decodedHeaderSysinfo">
+            <div class="sysinfo-empty">Jalankan pengujian untuk mengekstrak Public IP, rantai DNS (CNAME/PTR), ASN/ISP, lokasi datacenter, sertifikat TLS/SAN, OS Server, dan informasi runtime target.</div>
+          </div>
+          <ul class="human-points-list points-magenta" id="decodedHeaderPoints" style="display: none;">
+            <li><strong>Status Koneksi:</strong> Belum dijalankan. Masukkan konfigurasi API di sebelah kiri lalu klik <em>Run Full Agent Test</em>.</li>
+          </ul>
+          <pre class="jwt-json-pre pre-magenta" id="decodedHeaderJson" style="display: none;">{
+  "protocol": "awaiting_probe",
+  "gateway": "unverified",
+  "cache_policy": "no-store"
+}</pre>
+        </div>
+      </div>
+
+      <!-- 2. PAYLOAD: MODEL METADATA & 7-STAGE AGENT SUITE (PURPLE) -->
+      <div class="decoded-section">
+        <div class="decoded-section-bar">
+          <span class="decoded-section-title text-purple">PAYLOAD: AGENT READINESS &amp; METADATA</span>
+          <div class="sub-tabs">
+            <button type="button" class="sub-tab active-purple" id="tabBtnStages">7 Stages</button>
+            <button type="button" class="sub-tab" id="tabBtnPayloadJson">Metadata JSON</button>
+          </div>
+        </div>
+        <div class="decoded-body">
+          <!-- Compact 3-pill summary bar -->
+          <div class="compact-meta-bar">
+            <span>Model: <strong class="text-purple" id="kpiModelComparison">—</strong></span>
+            <span>Owner/FP: <strong id="kpiOwnerFingerprint">—</strong></span>
+            <span>Capabilities: <strong id="kpiCapabilities">—</strong></span>
+            <span id="kpiContextSpecs" style="display:none;"></span>
+          </div>
+
+          <div id="viewStagesChecklist">
+            <div class="stages-list" id="stagesContainer"></div>
+          </div>
+
+          <div id="viewPayloadJson" style="display: none;">
+            <pre class="jwt-json-pre pre-purple" id="decodedPayloadJson">{}</pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. SIGNATURE: AUTHENTICITY & EXPORT CONFIG (CYAN) -->
+      <div class="decoded-section">
+        <div class="decoded-section-bar">
+          <span class="decoded-section-title text-cyan">VERIFY AUTHENTICITY &amp; EXPORT</span>
+          <span class="stage-badge badge-pending" id="authVerdictBadge">UNVERIFIED</span>
+        </div>
+        <div class="decoded-body">
+          <ul class="authenticity-list" id="authForensicsList">
+            <li>Run test to inspect model authenticity, anti-masking, and proxy headers.</li>
+          </ul>
+
+          <div class="exporter-toolbar">
+            <div class="sub-tabs" id="exportFormatTabs">
+              <button type="button" class="sub-tab active-cyan" data-export="strix">Strix</button>
+              <button type="button" class="sub-tab" data-export="xalgorix">Xalgorix</button>
+              <button type="button" class="sub-tab" data-export="dotenv">.env</button>
+              <button type="button" class="sub-tab" data-export="json">JSON</button>
+              <button type="button" class="sub-tab" data-export="curl">cURL</button>
+            </div>
+
+            <div class="exporter-copy-group">
+              <span class="pane-top-hint" id="clipboardStatusBadge"></span>
+              <button type="button" id="btnCopyRedacted" class="btn-secondary-sm">Copy Masked</button>
+              <button type="button" id="btnCopyRealKey" class="btn-copy-safe">Copy Real Key (30s Wipe)</button>
+            </div>
+          </div>
+
+          <pre class="jwt-json-pre pre-cyan" id="exportConfigPreview"></pre>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script type="module" src="./assets/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,61 @@
+# Zero-Trace Security: Prevent Accidental Commit of Secrets, API Keys & Local Configs
+.env
+.env.*
+*.env
+.dev.vars
+.dev.vars.*
+*secret*
+*apikey*
+*api_key*
+*api-key*
+*credentials*
+strix-config*
+xalgorix-config*
+*.local.json
+*.local.yaml
+*.local.yml
+*.local.sh
+*.local.ps1
+*.local.bat
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# Logs & Runtime Dumps
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.dump
+*.heapsnapshot
+*.cpuprofile
+
+# Node.js & Cloudflare Wrangler (If used locally)
+node_modules/
+.wrangler/
+dist/
+.cache/
+
+# Editor, IDE & Local AI Agent Directories
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.gemini/
+.claude/
+.cursor/
+.aider*
+
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
